@@ -2057,3 +2057,85 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Account summary panel                                               */
+/* ------------------------------------------------------------------ */
+
+/* Two actions share the card footer; the divider sits on the row, not each
+   button, so the existing single-button border does not double up. */
+.cmtplay-tl-actions {
+  display: flex;
+  border-top: 1px solid var(--line);
+}
+
+.cmtplay-tl-actions .cmtplay-tl-open {
+  border-top: 0 !important;
+  justify-content: center;
+}
+
+.cmtplay-tl-actions .cmtplay-tl-open:first-child {
+  border-right: 1px solid var(--line) !important;
+}
+
+.cmtplay-acct-prop + .cmtplay-acct-prop {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.cmtplay-acct-prop h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cmtplay-acct-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.cmtplay-acct-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfaff;
+}
+
+.cmtplay-acct-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.cmtplay-acct-tile strong {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.cmtplay-acct-contact + .cmtplay-acct-contact {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.cmtplay-acct-title {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.cmtplay-acct-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}

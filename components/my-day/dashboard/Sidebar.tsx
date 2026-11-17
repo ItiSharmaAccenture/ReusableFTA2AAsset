@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Bot, Briefcase, Calendar, CircleHelp, LayoutDashboard, Package, PanelLeftClose, PanelLeftOpen, Settings, Users, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -68,6 +69,9 @@ export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCl
       {mobileOpen ? <div className="cmtplay-nav-scrim" onClick={onCloseMobile} aria-hidden="true" /> : null}
       <nav className={`cmtplay-sidebar${collapsed ? ' is-collapsed' : ''}${mobileOpen ? ' is-mobile-open' : ''}`} aria-label="Main">
         <div className="cmtplay-sidebar-brand">
+          <span className="cmtplay-sidebar-logo">
+            <Image src="/assets/my-day/accenture-logo.png" alt="Accenture" width={44} height={43} preload />
+          </span>
           <span className="cmtplay-sidebar-name">
             My Day
             <small>Field Technician</small>

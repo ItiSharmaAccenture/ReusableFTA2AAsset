@@ -14,6 +14,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Image from 'next/image';
 
 import type { CopilotErrorBody } from '@/types/copilot';
 
@@ -56,6 +57,7 @@ export default function TechnicianLogin({ fontClassName }: { fontClassName?: str
   return (
     <div className={`tl-screen ${fontClassName ?? ''}`}>
       <form className="tl-card" onSubmit={submit}>
+        <Image className="tl-logo" src="/assets/my-day/accenture-logo.png" alt="Accenture" width={82} height={80} priority />
 
         <h1 className="tl-title">My Day</h1>
         <p className="tl-subtitle">Sign in to see your schedule and talk to CMTPlay Copilot.</p>

@@ -12,6 +12,7 @@
  * /api/copilot; nothing here sees a credential.
  */
 
+import Image from 'next/image';
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -49,6 +50,7 @@ const WEEK_PROMPT = "What's my schedule this week?";
 const STARTERS = ["What's my schedule today?", WEEK_PROMPT, "What's my next appointment?", "I'm on my way"];
 const MAX_HISTORY = 12;
 const OFFLINE_MESSAGE = "Couldn't reach CMTPlay Copilot. Check your connection and try again.";
+const LOGO = '/assets/my-day/accenture-logo.png';
 
 type View = 'closed' | 'open' | 'minimised';
 /** How much room the panel takes: a compact corner card, or a large pane. */
@@ -636,6 +638,9 @@ export default function CopilotChat({
         onKeyDown={onPanelKeyDown}
       >
         <header className="cp-header">
+          <span className="cp-logo-tile">
+            <Image className="cp-logo" src={LOGO} alt="" width={34} height={33} />
+          </span>
           <div className="cp-heading">
             <h2 id={titleId} className="cp-title">
               {docked ? 'CMTPlay Technician Copilot' : 'CMTPlay Copilot'}
@@ -711,6 +716,7 @@ export default function CopilotChat({
         <div ref={logRef} className="cp-log" role="log" aria-label="Conversation with CMTPlay Copilot" hidden={Boolean(detail)}>
           {conversation.turns.length === 0 && (
             <div className="cp-welcome">
+              <Image className="cp-welcome-logo" src={LOGO} alt="" width={56} height={55} />
               <p className="cp-welcome-title">Hi {firstName}, how can I help?</p>
               <p className="cp-welcome-text">
                 {docked
@@ -739,6 +745,7 @@ export default function CopilotChat({
               </div>
             ) : (
               <div key={turn.id} className="cp-row">
+                <Image className="cp-avatar" src={LOGO} alt="" width={30} height={29} />
                 <div className="cp-stack">
                   {turn.pending && !turn.text ? (
                     <div className="cp-bubble cp-bubble--bot cp-typing" role="status">
@@ -838,6 +845,9 @@ export default function CopilotChat({
       {view === 'minimised' && (
         <div className="cp-mini" role="group" aria-label="CMTPlay Copilot, minimised">
           <button ref={restoreRef} type="button" className="cp-mini-open" onClick={open} aria-label="Restore CMTPlay Copilot">
+            <span className="cp-logo-tile cp-logo-tile--small">
+              <Image className="cp-mini-logo" src={LOGO} alt="" width={26} height={25} />
+            </span>
             <span className="cp-mini-title">CMTPlay Copilot</span>
             <span className={`cp-online cp-online--${status}`}>
               <span className="cp-online-dot" aria-hidden="true" />
