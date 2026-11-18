@@ -1,0 +1,259 @@
+/* /config — matches the My Day purple palette. */
+
+.cfg-page {
+  --cfg-ink: #2e053d;
+  --cfg-muted: #6b5a80;
+  --cfg-accent: #7a12e0;
+  --cfg-accent-soft: #ebe3fe;
+  --cfg-page: #fbf9fd;
+  --cfg-surface: #ffffff;
+  --cfg-line: #ded5f4;
+  --cfg-ok: #12a80b;
+  --cfg-ok-soft: #e3f7e7;
+  --cfg-error: #c4161c;
+  --cfg-error-soft: #fdecec;
+
+  min-height: 100vh;
+  background: var(--cfg-page);
+  color: var(--cfg-ink);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  padding: 48px 16px;
+}
+
+.cfg-main {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.cfg-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.cfg-logo {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--cfg-surface);
+  border: 1px solid var(--cfg-line);
+  flex: none;
+}
+
+.cfg-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.cfg-header p {
+  margin: 2px 0 0;
+  color: var(--cfg-muted);
+  font-size: 14px;
+}
+
+.cfg-back {
+  margin-left: auto;
+  color: var(--cfg-accent);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.cfg-back:hover {
+  text-decoration: underline;
+}
+
+.cfg-card {
+  background: var(--cfg-surface);
+  border: 1px solid var(--cfg-line);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(41, 22, 55, 0.06);
+}
+
+.cfg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.cfg-row-text {
+  flex: 1;
+}
+
+.cfg-row h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.cfg-row p {
+  margin: 0;
+  color: var(--cfg-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* Toggle switch */
+.cfg-switch {
+  position: relative;
+  flex: none;
+  width: 56px;
+  height: 32px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: #cbc2dc;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.cfg-switch.is-on {
+  background: var(--cfg-accent);
+}
+
+.cfg-switch:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.cfg-switch:focus-visible {
+  outline: 3px solid var(--cfg-accent-soft);
+  outline-offset: 2px;
+}
+
+.cfg-switch-thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.18s ease;
+}
+
+.cfg-switch.is-on .cfg-switch-thumb {
+  transform: translateX(24px);
+}
+
+.cfg-status {
+  display: grid;
+  gap: 10px;
+  margin: 22px 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--cfg-page);
+  border: 1px solid var(--cfg-line);
+}
+
+.cfg-status div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.cfg-status dt {
+  min-width: 130px;
+  color: var(--cfg-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cfg-status dd {
+  margin: 0;
+  font-size: 14px;
+}
+
+.cfg-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--cfg-ok-soft);
+  color: #0b6e06;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cfg-pill--demo {
+  background: var(--cfg-accent-soft);
+  color: var(--cfg-accent);
+}
+
+.cfg-field {
+  display: grid;
+  gap: 6px;
+}
+
+.cfg-field span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cfg-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--cfg-line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--cfg-ink);
+  background: #fff;
+}
+
+.cfg-field input:focus {
+  outline: 3px solid var(--cfg-accent-soft);
+  border-color: var(--cfg-accent);
+}
+
+.cfg-field small {
+  color: var(--cfg-muted);
+  font-size: 12px;
+}
+
+.cfg-message {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.cfg-message--ok {
+  background: var(--cfg-ok-soft);
+  color: #0b6e06;
+}
+
+.cfg-message--error {
+  background: var(--cfg-error-soft);
+  color: var(--cfg-error);
+}
+
+.cfg-note {
+  margin: 18px 0 0;
+  color: var(--cfg-muted);
+  font-size: 13px;
+}
+
+.cfg-note code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--cfg-accent-soft);
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .cfg-page {
+    padding: 28px 16px;
+  }
+
+  .cfg-back {
+    display: none;
+  }
+}

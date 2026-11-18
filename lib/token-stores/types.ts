@@ -37,6 +37,10 @@ export interface TokenBackend {
   savePending(pending: PendingAuth): Promise<void>;
   /** Must remove the record before returning it: a replayed callback gets nothing. */
   takePending(): Promise<PendingAuth | null>;
+
+  /** Small app settings changed at runtime (e.g. the Copilot demo mode from /config). */
+  readSetting<T>(name: string): Promise<T | null>;
+  writeSetting(name: string, value: unknown): Promise<void>;
 }
 
 /** Authorization requests expire quickly; a stale `state` must not be redeemable. */

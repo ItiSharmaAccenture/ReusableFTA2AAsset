@@ -118,6 +118,19 @@ export async function consumePendingAuth(state: string): Promise<PendingAuth | n
 }
 
 /* ------------------------------------------------------------------ */
+/* App settings                                                        */
+/* ------------------------------------------------------------------ */
+
+/** Kept beside the tokens so a setting survives restarts and, on Redis, is shared by every instance. */
+export async function readSetting<T>(name: string): Promise<T | null> {
+  return store().readSetting<T>(name);
+}
+
+export async function writeSetting(name: string, value: unknown): Promise<void> {
+  await store().writeSetting(name, value);
+}
+
+/* ------------------------------------------------------------------ */
 /* Reporting                                                           */
 /* ------------------------------------------------------------------ */
 

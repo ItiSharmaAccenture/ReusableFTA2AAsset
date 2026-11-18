@@ -21,7 +21,16 @@
 import 'server-only';
 
 import { GeminiConfigError, runAssistant, type AssistantOptions, type ToolResultContext } from './gemini';
+import { getCopilotMode } from './copilot-mode';
 import { log } from './logger';
+import {
+  fillPlaceholders,
+  findScriptedEntry,
+  runScriptedTurn,
+  scriptedSettings,
+  streamText,
+  type ScriptedEntry,
+} from './scripted-copilot';
 import { SalesforceAuthError } from './salesforce-auth';
 import { McpError, openMcpSession, type McpSession, type ParsedToolResult } from './salesforce-mcp';
 import {
@@ -1084,6 +1093,61 @@ async function* runStatusIntent(
 }
 
 /**
+ * Demo mode's "close it out": a scripted reply, but a real appointment.
+ *
+ * The job is the one named in the message, else the one selected on the
+ * dashboard. Its card comes live from Salesforce, and the reply ends with a
+ * `confirm` event that opens the card's "Mark … as completed?" box. Nothing
+ * changes until the technician confirms; the change itself then goes through
+ * the same status route as the card buttons. Gemini is never called.
+ */
+async function* runScriptedAction(
+  technician: Technician,
+  entry: ScriptedEntry,
+  message: string,
+  selected?: SelectedAppointment | null,
+): AsyncGenerator<CopilotEvent> {
+  const action = entry.action!;
+  const number =
+    findAppointmentNumber(message) ?? (selected?.appointmentNumber ? normaliseAppointmentNumber(selected.appointmentNumber) : null);
+  log.info('copilot', 'Scripted action', { entry: entry.id, action, number });
+
+  if (!number) {
+    yield* streamText(entry.noAppointmentResponse ?? 'Which job? Select it on your route, or name it (e.g. SA-0163), and ask again.');
+    yield { type: 'done' };
+    return;
+  }
+
+  yield { type: 'progress', label: scriptedSettings.progressLabel ?? 'Checking your schedule in Salesforce…' };
+  const connected = await openSession();
+
+  try {
+    const schedule = await loadSchedule(connected, technician);
+    const target =
+      schedule.appointments.find((appointment) => appointment.appointmentNumber === number) ?? recall(technician, number)?.appointment;
+
+    if (!target) {
+      yield { type: 'delta', text: `I couldn't find ${number} among your scheduled appointments, so there is nothing to close.` };
+      yield { type: 'done' };
+      return;
+    }
+
+    if (!availableActions(connected.capabilities).includes(action)) {
+      yield { type: 'delta', text: unsupportedMessage(action, connected.capabilities) };
+      yield { type: 'done' };
+      return;
+    }
+
+    yield { type: 'appointments', appointments: [target], meta: schedule.meta };
+    yield* streamText(fillPlaceholders(entry.response, new Date(), number));
+    yield { type: 'confirm', appointmentNumber: number, action };
+    yield { type: 'done' };
+  } finally {
+    await connected.close();
+  }
+}
+
+/**
  * Finds the property of the customer an upsell is for: the named or selected
  * appointment → its account name (from the schedule) → the account summary
  * tool. Every step uses Salesforce data; any gap is reported, never filled in.
@@ -1153,6 +1217,15 @@ export async function* runCopilotTurn(
   const scheduleIntent = detectScheduleIntent(body.message);
   if (scheduleIntent) {
     yield* runScheduleIntent(technician, scheduleIntent);
+    return;
+  }
+
+  // Everything below this point would ask Gemini. In scripted mode, answer
+  // from data/scripted-responses.json instead (switch: lib/copilot-mode.ts).
+  if ((await getCopilotMode()) === 'scripted') {
+    const entry = findScriptedEntry(body.message);
+    if (entry?.action) yield* runScriptedAction(technician, entry, body.message, selected);
+    else yield* runScriptedTurn(technician, body.message);
     return;
   }
 

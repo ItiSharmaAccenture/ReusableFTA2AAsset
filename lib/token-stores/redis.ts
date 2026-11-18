@@ -131,6 +131,14 @@ export function redisBackend(credentials: RedisCredentials): TokenBackend {
       await connection.del(pendingKey).catch(() => undefined);
       return pending ?? null;
     },
+
+    async readSetting<T>(name: string) {
+      return ((await (await redis()).get<T>(`${prefix}:setting:${name}`)) ?? null) as T | null;
+    },
+
+    async writeSetting(name: string, value: unknown) {
+      await (await redis()).set(`${prefix}:setting:${name}`, value);
+    },
   };
 }
 

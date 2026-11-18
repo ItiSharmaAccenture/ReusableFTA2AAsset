@@ -100,5 +100,7 @@ export type CopilotEvent =
   /** Withdraws text streamed so far: it was a preamble to a tool call. */
   | { type: 'reset' }
   | { type: 'appointments'; appointments: Appointment[]; meta: ScheduleMeta }
+  /** Opens the confirmation for a status change on that appointment's card; nothing changes until the technician confirms. */
+  | { type: 'confirm'; appointmentNumber: string; action: StatusAction }
   | { type: 'done' }
   | { type: 'error'; message: string; retryable: boolean };

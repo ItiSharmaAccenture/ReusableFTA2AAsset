@@ -23,6 +23,7 @@ export function fileBackend(): TokenBackend & { paths: { dir: string; tokenFile:
   const dir = process.env.TOKEN_STORE_DIR ?? join(process.cwd(), '.local');
   const tokenFile = join(dir, 'salesforce-tokens.json');
   const pendingFile = join(dir, 'salesforce-oauth-pending.json');
+  const settingsFile = join(dir, 'app-settings.json');
 
   async function readJson<T>(path: string): Promise<T | null> {
     try {
@@ -66,6 +67,17 @@ export function fileBackend(): TokenBackend & { paths: { dir: string; tokenFile:
       const pending = await readJson<PendingAuth>(pendingFile);
       await unlink(pendingFile).catch(() => undefined);
       return pending;
+    },
+
+    async readSetting<T>(name: string) {
+      const settings = await readJson<Record<string, unknown>>(settingsFile);
+      return (settings?.[name] as T | undefined) ?? null;
+    },
+
+    async writeSetting(name, value) {
+      const settings = (await readJson<Record<string, unknown>>(settingsFile)) ?? {};
+      settings[name] = value;
+      await writeJson(settingsFile, settings);
     },
   };
 }

@@ -1,0 +1,64 @@
+{
+  "_readme": [
+    "Hardcoded Copilot answers, used only when COPILOT_MODE is 'scripted' (see lib/copilot-mode.ts).",
+    "Entries are checked top to bottom; the first one whose keywords match the question wins.",
+    "A keyword matches when every word in it appears in the question (case and punctuation ignored).",
+    "Responses are markdown. {{today}} becomes today's date, e.g. 'Tue, Nov 17, 2026'.",
+    "Appointment numbers like SA-0163 become links; list an appointment under 'appointments' to also show its card.",
+    "An entry with \"action\": \"complete\" really closes a job: it shows the selected (or named) appointment's live card with a confirmation, and confirming sets it to Completed in Salesforce. {{appointment}} becomes that appointment's number.",
+    "Edit this file, then rebuild (npm run build) or restart npm run dev."
+  ],
+  "progressLabel": "Asking Salesforce…",
+  "thinkingDelayMs": 900,
+  "streamDelayMs": 25,
+  "fallback": "I can help with these in this version of the Copilot:\n\n- **What can I upsell here?**\n- **What parts do I need today?**\n- **I need another motion sensor, who has one nearby?**\n- **Summarize this customer**\n- **I'm done with this job, close it out**\n\nYour schedule questions (\"What's my schedule today?\", \"next appointment\") are answered live from Salesforce.",
+  "entries": [
+    {
+      "id": "close-job",
+      "action": "complete",
+      "keywords": ["close it", "close out", "close the job", "close this job", "job closure", "done with this job", "done with the job", "done with this", "mark complete", "mark it complete", "complete the job", "complete this job", "finish the job", "finished with this", "wrap up"],
+      "response": "Great work! I'm ready to close out {{appointment}}. Confirm below and I'll mark it as **Completed** in Salesforce.",
+      "noAppointmentResponse": "Which job should I close? Select it on your route (or name it, e.g. \"close out SA-0163\") and ask again."
+    },
+    {
+      "id": "upsell",
+      "keywords": ["upsell", "upsale", "recommend product", "recommended product", "what can i sell"],
+      "response": "For your appointment SA-0163 at the Alvarez Residence, here are the recommended products:\n\n**Door/Window Sensor** (Living Room, Bed Room) — Reason: Recommended for entry points such as bedroom windows, fitting the Alvarez Residence which has 3 bedrooms to alert when a door or window opens.\n\n**Fire Alarm 2nd Gen** (Bathroom, Living Room) — Reason: Recommended as an affordable way to add smart fire and CO detection to living rooms and bathrooms, which suits the Alvarez Residence with its 2 bathrooms.\n\n**Fire Alarm 3rd Gen** (Bathroom, Living Room) — Reason: Recommended for new installs and upgrades in living rooms and bathrooms, making it a great fit for this installation service at the Alvarez Residence with its 2 bathrooms.\n\n**Google Nest Cam Indoor (wired, 3rd gen)** (Living Room) — Reason: Recommended for living rooms and common indoor areas to monitor the home with HD video, night vision, and activity alerts while away.\n\n**Google Nest Cam Outdoor (wired, 2nd gen)** (Lawn) — Reason: Weatherproof outdoor camera providing continuous power, HD video, night vision, and smart alerts for people, animals, and vehicles.\n\n**Google Nest Doorbell** (Lawn) — Reason: Recommended for front door and entryway security for homes wanting constant power and reliable 24/7 monitoring of visitors and deliveries.\n\n**Google Nest Doorbell (battery)** (Lawn) — Reason: Recommended where a quick, no-wiring installation is needed, featuring a rechargeable battery, live view, and smart alerts.\n\nI suggest raising the Fire Alarm 3rd Gen first, as it is specifically recommended for new installation jobs like SA-0163 and suits the property's bathrooms and living areas."
+    },
+    {
+      "id": "motion-sensor",
+      "keywords": ["motion", "who has one", "nearby technician", "in stock"],
+      "response": "Here are the technicians who currently have the Motion Sensor in stock:\n\n**Sunita Uppal** — Quantity: 25, Phone: (910) 334-4567, Address: 1225 17th Street, Denver, CO 80202, United States\n\n**Divya Sharma** — Quantity: 20, Phone: Not available, Address: 1325 18th Street, Denver, CO 80202, United States"
+    },
+    {
+      "id": "account-summary",
+      "keywords": ["summarize", "summarise", "summary", "about this customer", "customer details", "account details"],
+      "response": "Here is the account summary for the Alvarez Residence associated with appointment SA-0163:\n\n**Contacts:** John Smith\n\n**Service address:** 1625 Chandler Ridge Drive, Round Rock, Texas, 78665, United States\n\n**Property (Alvarez Residence):** Type: Townhome, Size: 1610 sq ft, Bedrooms: 3, Bathrooms: 2, Year built: 2012, Security system base: Command panel, Monitoring status: In Service"
+    },
+    {
+      "id": "parts",
+      "keywords": ["parts", "line item", "what do i need", "materials"],
+      "response": "For your scheduled appointments today, SA-0163 and SA-0063, here are the required line items:\n\n**Battery, High Capacity** (Line Item 00000001) — Quantity: 5.00, Total: $200.00\n\n**Remote Monitoring Subscription** (Line Item 00000002) — Quantity: 3.00, Total: $750.00\n\n**Performance Optimization** (Line Item 00000003) — Quantity: 10.00, Total: $2,500.00\n\n**Starter Kit** (Line Item 00000004) — Quantity: 2.00, Total: $300.00\n\n**Installation Services** (Line Item 00000005) — Quantity: 1.00, Total: $1,500.00",
+      "appointments": [
+        {
+          "appointmentNumber": "SA-0163",
+          "status": "Scheduled",
+          "subject": "Installation Services",
+          "appointmentDate": "{{today}}",
+          "scheduledWindow": "5:30 PM - 6:30 PM",
+          "accountName": "Alvarez Residence",
+          "address": "1625 Chandler Ridge Drive, Round Rock, Texas 78665, United States"
+        },
+        {
+          "appointmentNumber": "SA-0063",
+          "status": "Scheduled",
+          "subject": "Battery Replacement - Carter Residence",
+          "appointmentDate": "{{today}}",
+          "scheduledWindow": "7:00 PM - 8:00 PM",
+          "accountName": "Alvarez Residence",
+          "address": "812 Sunrise Court, Round Rock, Texas 78681, United States"
+        }
+      ]
+    }
+  ]
+}

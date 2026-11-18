@@ -398,6 +398,10 @@ export default function CopilotChat({
             },
           }));
           break;
+        case 'confirm':
+          // Opens the card's confirmation box; the change only happens when the technician confirms.
+          setActionStates((states) => ({ ...states, [event.appointmentNumber]: { confirm: event.action } }));
+          break;
         case 'error':
           outcome.failure = { message: event.message, retryable: event.retryable };
           break;
