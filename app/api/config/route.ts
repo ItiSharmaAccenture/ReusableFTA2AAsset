@@ -2,13 +2,10 @@
  * GET  /api/config — the current Copilot mode (live or scripted demo).
  * POST /api/config — change it. Body: { "copilotMode": "live" | "scripted" }.
  *
- * Changing the mode needs SETUP_SECRET in the `x-setup-secret` header, the same
- * secret that protects the one-time Salesforce setup, so a visitor to a
- * deployed demo cannot flip it. Reading it needs nothing: it is not sensitive.
+ * Neither needs a secret: anyone who can open the app can switch demo mode.
  */
 
 import { getCopilotModeState, isCopilotMode, setCopilotMode } from '@/lib/copilot-mode';
-import { requireSetupSecret } from '@/lib/setup-guard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,9 +17,6 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const denied = requireSetupSecret(request);
-  if (denied) return Response.json({ error: denied.message }, { status: denied.status, headers: NO_STORE });
-
   let body: unknown;
   try {
     body = await request.json();

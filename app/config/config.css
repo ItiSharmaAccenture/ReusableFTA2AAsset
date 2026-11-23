@@ -186,38 +186,6 @@
   color: var(--cfg-accent);
 }
 
-.cfg-field {
-  display: grid;
-  gap: 6px;
-}
-
-.cfg-field span {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.cfg-field input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid var(--cfg-line);
-  border-radius: 10px;
-  font: inherit;
-  font-size: 14px;
-  color: var(--cfg-ink);
-  background: #fff;
-}
-
-.cfg-field input:focus {
-  outline: 3px solid var(--cfg-accent-soft);
-  border-color: var(--cfg-accent);
-}
-
-.cfg-field small {
-  color: var(--cfg-muted);
-  font-size: 12px;
-}
-
 .cfg-message {
   margin: 16px 0 0;
   padding: 10px 12px;

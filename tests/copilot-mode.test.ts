@@ -18,10 +18,10 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-const post = (body: unknown, secret?: string) =>
+const post = (body: unknown) =>
   new Request('http://localhost:3001/api/config', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(secret ? { 'x-setup-secret': secret } : {}) },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
@@ -48,23 +48,14 @@ describe('/api/config', () => {
     expect(await (await GET()).json()).toMatchObject({ mode: 'live' });
   });
 
-  it('refuses a change without the setup secret', async () => {
-    const { POST } = await import('@/app/api/config/route');
-    expect((await POST(post({ copilotMode: 'scripted' }))).status).toBe(401);
-    expect((await POST(post({ copilotMode: 'scripted' }, 'wrong'))).status).toBe(401);
-
-    const { getCopilotMode } = await import('@/lib/copilot-mode');
-    expect(await getCopilotMode()).toBe('live');
-  });
-
   it('rejects an unknown mode', async () => {
     const { POST } = await import('@/app/api/config/route');
-    expect((await POST(post({ copilotMode: 'offline' }, 'test-setup-secret'))).status).toBe(400);
+    expect((await POST(post({ copilotMode: 'offline' }))).status).toBe(400);
   });
 
-  it('switches to demo mode with the secret', async () => {
+  it('switches to demo mode without any secret', async () => {
     const { POST } = await import('@/app/api/config/route');
-    const response = await POST(post({ copilotMode: 'scripted' }, 'test-setup-secret'));
+    const response = await POST(post({ copilotMode: 'scripted' }));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ mode: 'scripted', source: 'config', codeDefault: 'live' });
   });
