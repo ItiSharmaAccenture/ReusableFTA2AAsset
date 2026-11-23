@@ -106,6 +106,22 @@ export const config = {
     scopes: list('SALESFORCE_SCOPES', ['mcp_api', 'refresh_token', 'offline_access']),
   },
 
+  /**
+   * The Property Upsell Agent, reached over A2A.
+   *
+   * Deliberately has no default: a hardcoded localhost would be unreachable the
+   * moment this is deployed, and would fail as a confusing connection error
+   * rather than as a setup step. Unset means the delegation is simply not
+   * offered, and the Copilot says so.
+   */
+  upsellAgent: {
+    url: optional('A2A_UPSELL_AGENT_URL'),
+    /** Skill id to require on the agent card, so a card without it fails early. */
+    skillId: optional('A2A_UPSELL_AGENT_SKILL') ?? 'property_upsell_recommendations',
+    /** One delegated turn runs a whole catalogue through the agent's own model. */
+    timeoutMs: num('A2A_UPSELL_AGENT_TIMEOUT_MS', 180_000),
+  },
+
   setup: {
     secret: optional('SETUP_SECRET'),
     /**

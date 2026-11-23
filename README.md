@@ -421,6 +421,57 @@ the read tools only.
 > `readOnlyHint: false` on every invocable Apex action, read-only ones included,
 > so filtering on that flag would withhold the entire toolset.
 
+### Upsell is delegated to another agent over A2A
+
+Product recommendations do not come from Salesforce. They come from the
+**Property Upsell Agent**, a separate Google ADK agent that holds the product
+catalogue and reasons over it, reached over the A2A protocol.
+
+```
+browser ──▶ /api/copilot ──▶ Gemini orchestration ──┬──▶ Salesforce Hosted MCP
+                                                    │     (customer, property, appointment)
+                                                    └──▶ Property Upsell Agent over A2A
+                                                          (catalogue, recommendations)
+```
+
+The split is the point: **Salesforce owns** the customer, the property and the
+appointment; **the agent owns** products. Neither implements the other's half.
+
+What happens on an upsell question:
+
+1. The selected or named appointment gives the account name, from the schedule
+   lookup.
+2. The account summary tool returns that account's property records.
+3. Those fields are mapped onto the seven the agent treats as verified
+   (`Property_Type__c`, `Bedrooms__c`, …) and sent as structured data. A field
+   Salesforce did not return is **omitted**, never defaulted — the agent is told
+   it is unknown and not to guess it.
+4. The agent answers from its catalogue, citing a page per product.
+5. The answer comes back wrapped as data, exactly as Salesforce record content
+   is, because an agent-to-agent channel is another injection surface.
+
+If the property cannot be verified, the agent is **not called at all** and the
+Copilot says why. A recommendation with no verified property behind it is the
+thing this path exists to prevent.
+
+Two routes reach it, deliberately:
+
+| Trigger | Path |
+|---|---|
+| The Upsell tab button and the suggested chip ("Recommend upsell products") | A deterministic intent, so the demo does not depend on model tool-selection |
+| Any other wording ("what can I upsell in the kitchen?") | Gemini chooses `recommend_upsell_products`, a local tool offered beside the MCP tools |
+
+Set `A2A_UPSELL_AGENT_URL` to switch it on; see `.env.example`. There is no
+default, so an unset value means the Copilot simply says recommendations are
+unavailable rather than failing against an unreachable localhost. If the org
+still publishes an upsell Apex action, withdraw it with
+`SALESFORCE_TOOL_BLOCKLIST` so two implementations do not compete.
+
+> **POC limitation:** the catalogue lives in the agent, so Salesforce is no
+> longer the system of record for products. Recommended product names are not
+> guaranteed to match `Product2` records, so a quote step would need a
+> name-matching stage.
+
 ## Tests
 
 ```bash

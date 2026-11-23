@@ -188,6 +188,34 @@ export interface AssistantOptions {
     result: ParsedToolResult,
     context: ToolResultContext,
   ) => string | void | Promise<string | void>;
+  /**
+   * Functions that run in this process rather than at an MCP server, offered to
+   * Gemini alongside the discovered tools.
+   *
+   * This is what lets the model delegate to something that is not a Salesforce
+   * tool — the A2A product recommendation agent — as a decision of its own,
+   * rather than the application routing around it. A local tool still goes
+   * through the same selection, progress and result reporting as an MCP call;
+   * only the execution differs.
+   */
+  localTools?: LocalTool[];
+}
+
+/**
+ * A tool executed here instead of at Salesforce.
+ *
+ * `context` is the same MCP handle the result hooks get, so a local tool can
+ * still gather verified Salesforce data before it acts. It is null when no MCP
+ * session could be opened.
+ */
+export interface LocalTool {
+  name: string;
+  description: string;
+  /** JSON Schema for the function's parameters, as Gemini expects it. */
+  parameters: JsonSchema;
+  execute: (args: Record<string, unknown>, context: ToolResultContext | null) => Promise<string>;
+  /** Shown while it runs. Falls back to the tool name. */
+  progressLabel?: string;
 }
 
 export interface ToolResultContext {
@@ -299,12 +327,48 @@ export async function* runAssistant(body: ChatRequestBody, options: AssistantOpt
     (options.systemInstruction ?? systemInstruction)(tools) +
     (discoveryError ? `\n\nSalesforce is currently unreachable. Reason to relay to the user: ${discoveryError}` : '');
 
+  // Local tools are offered to the model beside the discovered ones. A name
+  // collision would make the call ambiguous, so MCP wins and the local tool is
+  // dropped: a Salesforce tool the org actually publishes is never shadowed.
+  const mcpNames = new Set(tools.map((tool) => tool.name));
+  const localTools = (options.localTools ?? []).filter((local) => {
+    if (!mcpNames.has(local.name)) return true;
+    log.warn('gemini', 'Local tool shadowed by a discovered MCP tool', { name: local.name });
+    return false;
+  });
+  const localByName = new Map(localTools.map((local) => [local.name, local]));
+
+  const declarations: FunctionDeclaration[] = [
+    ...toFunctionDeclarations(tools),
+    ...localTools.map((local) => ({
+      name: local.name,
+      description: local.description,
+      parametersJsonSchema: toGeminiSchema(local.parameters),
+    })),
+  ];
+
   const generationConfig = {
     systemInstruction: instruction,
-    ...(tools.length > 0 ? { tools: [{ functionDeclarations: toFunctionDeclarations(tools) }] } : {}),
+    ...(declarations.length > 0 ? { tools: [{ functionDeclarations: declarations }] } : {}),
   };
 
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
+
+  // Built once per turn rather than per call: a local tool has no MCP result to
+  // hang a context off, and a result hook that needs one should not depend on
+  // which call happened to produce it.
+  const activeSession = session;
+  const toolContext: ToolResultContext | null = activeSession
+    ? {
+        callTool: async (followName, followArgs) => {
+          const followTool = toolsByName.get(followName);
+          if (!followTool) throw new Error(`Tool "${followName}" is not approved for use.`);
+          const followValidation = validateToolArguments(followTool, followArgs);
+          if (!followValidation.ok) throw new Error(followValidation.reason);
+          return activeSession.callTool(followName, followValidation.args);
+        },
+      }
+    : null;
 
   try {
     let answered = false;
@@ -411,6 +475,36 @@ export async function* runAssistant(body: ChatRequestBody, options: AssistantOpt
 
         yield { type: 'tool_selected', key, tool: name, message: `Selected tool: ${name}` };
 
+        const local = localByName.get(name);
+        if (local) {
+          yield { type: 'tool_started', key, tool: name, message: local.progressLabel ?? `Running ${name}` };
+
+          const startedAt = Date.now();
+          try {
+            const localArgs = (call.args ?? {}) as Record<string, unknown>;
+            const answer = await local.execute(localArgs, toolContext);
+            const durationMs = Date.now() - startedAt;
+            log.info('gemini', 'Local tool completed', { name, durationMs, chars: answer.length });
+            yield { type: 'tool_completed', key, tool: name, durationMs, success: true, message: 'Agent response received' };
+            responseParts.push({
+              functionResponse: {
+                ...(call.id ? { id: call.id } : {}),
+                name,
+                // Same treatment as record content: what came back is data, and
+                // an agent-to-agent channel is one more place it can arrive from.
+                response: { agent_data: answer },
+              },
+            });
+          } catch (error) {
+            const durationMs = Date.now() - startedAt;
+            const message = describeError(error);
+            log.error('gemini', 'Local tool failed', { name, message });
+            yield { type: 'tool_failed', key, tool: name, durationMs, success: false, message: shortError(error) };
+            responseParts.push(errorResponse(call.id, name, message));
+          }
+          continue;
+        }
+
         const tool = toolsByName.get(name);
         if (!tool) {
           // Gemini can only see approved tools, so this means it invented one.
@@ -472,17 +566,8 @@ export async function* runAssistant(body: ChatRequestBody, options: AssistantOpt
             result.truncated ? 'Parsed MCP response (truncated to fit)' : 'Parsed MCP response',
           );
 
-          const activeSession = session;
-          const context: ToolResultContext = {
-            callTool: async (followName, followArgs) => {
-              const followTool = toolsByName.get(followName);
-              if (!followTool) throw new Error(`Tool "${followName}" is not approved for use.`);
-              const followValidation = validateToolArguments(followTool, followArgs);
-              if (!followValidation.ok) throw new Error(followValidation.reason);
-              return activeSession.callTool(followName, followValidation.args);
-            },
-          };
-          const forModel = (await options.onToolResult?.(tool, result, context)) ?? result.text;
+          const forModel =
+            (toolContext ? await options.onToolResult?.(tool, result, toolContext) : undefined) ?? result.text;
 
           responseParts.push({
             functionResponse: {

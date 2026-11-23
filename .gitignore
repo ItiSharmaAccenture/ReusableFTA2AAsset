@@ -52,3 +52,6 @@ salesforce-oauth-pending.json
 
 # Copied from node_modules by scripts/copy-maplibre-worker.mjs
 /public/vendor/maplibre/
+
+# Salesforce CLI local state: per-machine, tied to one org Id.
+/.sf/

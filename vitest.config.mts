@@ -14,6 +14,13 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    /**
+     * Several tests call `vi.resetModules()` and then re-import a route, which
+     * re-transforms its whole module graph inside the test body. With one
+     * worker spawned per file that occasionally takes longer than vitest's 5s
+     * default on a loaded machine — a timeout, never a wrong assertion.
+     */
+    testTimeout: 20_000,
     // The modules read configuration at import time, so the environment has to
     // be in place before any of them load.
     env: {

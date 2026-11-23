@@ -5,8 +5,15 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { copilotInstruction, customerPropertyFrom, digestAccountSummary, digestUpsell, readAccountSummary } from '@/lib/copilot';
+import {
+  copilotInstruction,
+  customerPropertyFrom,
+  digestAccountSummary,
+  digestAgentRecommendations,
+  readAccountSummary,
+} from '@/lib/copilot';
 import { toTechnician } from '@/lib/technician';
+import { toAgentPayload } from '@/lib/upsell-payload';
 import { validateToolArguments, wrapActionInputs, type ApprovedTool } from '@/lib/tool-allowlist';
 
 const summaryData = {
@@ -138,21 +145,42 @@ describe('account summary instruction', () => {
   });
 });
 
+/**
+ * The property half of an upsell. The products now come from the A2A agent, but
+ * what reaches it still has to be a property Salesforce actually returned —
+ * this is the regression net for "never invent a property detail".
+ */
 describe('upsell property context', () => {
   const summary = readAccountSummary(response);
-  const upsell = {
-    products: [{ name: 'Smart Lock', rooms: ['Entry'], recommendedFor: 'Townhomes', description: 'Keyless entry.' }],
-    availableCategories: [],
-  };
 
-  it('uses the exact matching account’s verified property details', () => {
+  it('sends the exact matching account’s verified property details to the agent', () => {
     const property = customerPropertyFrom(summary, 'Biospan, LLC.');
     expect(property.available).toBe(true);
-    const digest = digestUpsell(upsell, property);
-    expect(digest).toContain('Recommended for: Townhomes');
-    expect(digest).toContain('Customer property details (verified from the Salesforce account summary for Biospan, LLC.)');
-    expect(digest).toContain('Property type: Townhome');
-    expect(digest).toContain('Monitoring status: In Service');
+    if (!property.available) return;
+
+    // The values crossing to the agent are the ones Salesforce returned, under
+    // the field names the agent treats as verified.
+    expect(toAgentPayload(property.properties[0])).toEqual({
+      property: {
+        Property_Type__c: 'Townhome',
+        Property_Size__c: 1610,
+        Bedrooms__c: 3,
+        Bathrooms__c: 2,
+        Year_Built__c: 2012,
+        Security_System_Base__c: 'Command panel',
+        Monitoring_Status__c: 'In Service',
+      },
+    });
+
+    const digest = digestAgentRecommendations({
+      property,
+      agentText: '1. Smart Lock — Source: catalogue.pdf, page 2',
+      agentName: 'Property Upsell Agent',
+      propertyName: property.properties[0].name,
+      missingFields: [],
+    });
+    expect(digest).toContain('verified from the Salesforce account summary for Biospan, LLC.');
+    expect(digest).toContain('Alvarez Residence');
   });
 
   it('reports missing property details instead of guessing', () => {
@@ -162,9 +190,13 @@ describe('upsell property context', () => {
     const noProps = { accounts: [{ accountName: 'Biospan, LLC.', properties: [] }] };
     expect(customerPropertyFrom(readAccountSummary(noProps), 'Biospan, LLC.').available).toBe(false);
 
-    const digest = digestUpsell(upsell, { available: false, reason: 'no appointment is selected or named, so the customer is not known' });
-    expect(digest).toContain('Customer property details: NOT AVAILABLE — no appointment is selected or named');
-    expect(digest).toContain('Do not mention or assume any property detail');
+    // No verified property means the agent is never asked, and the model is
+    // told to recommend nothing rather than fall back on its own knowledge.
+    const digest = digestAgentRecommendations({
+      property: { available: false, reason: 'no appointment is selected or named, so the customer is not known' },
+    });
+    expect(digest).toContain('no appointment is selected or named');
+    expect(digest).toContain('Do not recommend any product, and do not mention or assume any property detail');
   });
 
   it('treats several partial matches as ambiguous', () => {
@@ -172,9 +204,5 @@ describe('upsell property context', () => {
     const property = customerPropertyFrom(readAccountSummary(two), 'Biospan');
     expect(property).toMatchObject({ available: false });
     expect(!property.available && property.reason).toMatch(/2 accounts matching/);
-  });
-
-  it('keeps the product-only digest when no property lookup ran', () => {
-    expect(digestUpsell(upsell)).not.toContain('Customer property details');
   });
 });

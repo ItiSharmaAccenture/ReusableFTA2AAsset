@@ -5,8 +5,10 @@
  *
  * Overview, Parts and Inventory are read directly from Salesforce REST
  * (GET /api/appointments/[id], which first checks the job is assigned to
- * you). Upsell and Completion run through CMTPlay Copilot, which uses the existing
- * MCP tools; any status change still needs the technician's confirmation on
+ * you). Upsell and Completion run through CMTPlay Copilot: Completion uses the
+ * existing MCP tools, and Upsell delegates to the Property Upsell Agent over
+ * A2A after looking the property up in Salesforce. Any status change still
+ * needs the technician's confirmation on
  * the Copilot card. No product image is shown unless it is a real match, and
  * none are bundled yet, so products are listed by name.
  */
@@ -283,8 +285,8 @@ export default function JobWorkspace({ appointmentId, timezone, onClose, onAskCo
           <div className="cmtplay-ws-block">
             <h3>Upsell recommendations</h3>
             <p className="cmtplay-muted">
-              Recommendations come from Salesforce through CMTPlay Copilot (the Suggested Category on products). Quote changes are only made after the customer
-              confirms and you approve them.
+              CMTPlay Copilot looks this customer&rsquo;s property up in Salesforce, then asks the Property Upsell Agent, which holds the product catalogue.
+              Only verified property details are sent. Quote changes are only made after the customer confirms and you approve them.
             </p>
             <button type="button" className="cmtplay-btn cmtplay-btn--primary" onClick={() => onAskCopilot('Recommend upsell products')}>
               <Sparkles size={15} aria-hidden="true" /> Recommend upsell products
