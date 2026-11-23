@@ -472,10 +472,68 @@ still publishes an upsell Apex action, withdraw it with
 > guaranteed to match `Product2` records, so a quote step would need a
 > name-matching stage.
 
+### Running both halves locally
+
+The agent lives in [`agent/`](agent/) in this repository. The Copilot's upsell
+path does nothing until it is running, so start it first.
+
+**1. Obtain the catalogue PDF.** It is deliberately **not committed** — see
+`agent/.gitignore`. Ask the project owner for `security_product_catalogue.pdf`
+and drop it into `agent/catalog/`. The folder must hold **exactly one** PDF; the
+agent refuses to start otherwise, rather than guessing which to read.
+
+**2. Install and run the agent.**
+
+```bash
+cd agent
+python -m venv .venv
+.venv/Scripts/python.exe -m pip install -r requirements.txt   # Windows
+# source .venv/bin/activate && pip install -r requirements.txt  # macOS/Linux
+
+cp .env.example .env     # then add OPENROUTER_API_KEY
+.venv/Scripts/python.exe -m uvicorn main:app --host 127.0.0.1 --port 8001
+```
+
+It prints the catalogue, provider, model and card URL when ready. Check it with:
+
+```bash
+curl http://127.0.0.1:8001/.well-known/agent-card.json
+```
+
+The card must publish the skill id `property_upsell_recommendations`, which is
+what `A2A_UPSELL_AGENT_SKILL` matches on.
+
+**3. Point the app at it** in `.env.local`:
+
+```bash
+A2A_UPSELL_AGENT_URL=http://127.0.0.1:8001
+```
+
+**4. Run the app** with `npm run dev`, then sign in at `/my-day`, open a job and
+use the **Upsell** tab.
+
+Two things that look like bugs but are not:
+
+- **Sign in with the name that matches the Salesforce ServiceResource.** The
+  technician *ID* scopes the dashboard through `CMTPlay_TECHNICIAN_DIRECTORY`,
+  but the Copilot looks appointments up by the **name** you declare. A mismatch
+  gives "SA-nnnn was not found in the technician's schedule" and no delegation —
+  correct behaviour, since nothing is guessed, but confusing mid-demo.
+- **A delegated turn takes roughly 50-60 seconds.** One turn runs the whole
+  catalogue through the agent's model. The default timeout is 180s.
+
+If the org links appointments by **Owner** rather than `AssignedResource`, also
+set `CMTPlay_APPOINTMENT_SOURCE=owner_query`, or the dashboard shows no jobs and
+you never reach the Upsell tab.
+
+> **Free-tier quota:** OpenRouter allows **50 free-model requests per day,
+> account-wide** across all `:free` models. Each upsell turn is one request.
+> Budget for that before a long rehearsal.
+
 ## Tests
 
 ```bash
-npm test        # 310 tests
+npm test        # 375 tests
 npm run lint
 npm run build
 ```

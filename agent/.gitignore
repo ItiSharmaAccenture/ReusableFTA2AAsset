@@ -1,0 +1,11 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+
+# Salesforce CLI local state, if the CLI is ever run from here.
+.sf/
+
+# The catalogue PDF is supplied per deployment, not committed.
+# The agent will not start without exactly one PDF in catalog/; see README.md.
+catalog/*.pdf
