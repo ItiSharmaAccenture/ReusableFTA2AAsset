@@ -34,6 +34,21 @@ token of any kind.
 
 ---
 
+## Documentation
+
+| Document | For | Covers |
+|---|---|---|
+| [`docs/setup.html`](docs/setup.html) | Anyone setting this up | Every step from cloning to the first recommendation, with the failure modes named |
+| [`docs/architecture.html`](docs/architecture.html) | Anyone who needs to understand or extend it | How the two systems connect, the field contract, the trust boundaries |
+| [`CLAUDE.md`](CLAUDE.md) | Claude Code | The same ground plus terminal-level gotchas and repository conventions |
+| This README | Reference | Configuration variables, access control, API surface |
+
+The two HTML documents are written to be opened in a browser. Clone the
+repository and open them directly, or view them as published pages if you were
+given the links.
+
+---
+
 ## Prerequisites
 
 | Requirement | Notes |

@@ -1,0 +1,793 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Field Service A2A Setup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: single reading column; numbered steps mark a real sequence, since
+     Salesforce must be configured before the app can authorize. */
+  :root {
+    --bg: #fbfaff;
+    --surface: #ffffff;
+    --surface-2: #f4f1fb;
+    --fg: #1c1826;
+    --muted: #615a72;
+    --line: #e3ddf0;
+    --accent: #6d28d9;
+    --accent-soft: #ede6fd;
+    --warn: #9a3412;
+    --warn-bg: #fff4ec;
+    --warn-line: #f5d0b0;
+    --stop: #9f1239;
+    --stop-bg: #fff1f4;
+    --stop-line: #f7c6d2;
+    --ok: #15803d;
+    --ok-bg: #f0fdf4;
+    --ok-line: #bbf0ca;
+    --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141221;
+      --surface: #1c1930;
+      --surface-2: #242038;
+      --fg: #ece9f5;
+      --muted: #a79fbd;
+      --line: #322c4a;
+      --accent: #c4a5ff;
+      --accent-soft: #2c2347;
+      --warn: #fdba74;
+      --warn-bg: #2b1d12;
+      --warn-line: #54351c;
+      --stop: #fda4b4;
+      --stop-bg: #2c1420;
+      --stop-line: #572236;
+      --ok: #86efac;
+      --ok-bg: #11291b;
+      --ok-line: #24512f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141221;
+    --surface: #1c1930;
+    --surface-2: #242038;
+    --fg: #ece9f5;
+    --muted: #a79fbd;
+    --line: #322c4a;
+    --accent: #c4a5ff;
+    --accent-soft: #2c2347;
+    --warn: #fdba74;
+    --warn-bg: #2b1d12;
+    --warn-line: #54351c;
+    --stop: #fda4b4;
+    --stop-bg: #2c1420;
+    --stop-line: #572236;
+    --ok: #86efac;
+    --ok-bg: #11291b;
+    --ok-line: #24512f;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.65;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 72px;
+  }
+  .wrap { max-width: 50rem; margin: 0 auto; }
+
+  /* Masthead */
+  .masthead { padding-block: 44px 28px; border-bottom: 2px solid var(--fg); }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(2rem, 6vw, 2.9rem);
+    line-height: 1.08;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    margin: 0 0 14px;
+  }
+  .standfirst { font-size: 1.1rem; color: var(--muted); margin: 0; max-width: 42rem; }
+
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 10px 28px;
+    margin-top: 26px; font-size: 0.85rem; color: var(--muted);
+  }
+  .meta-row b { color: var(--fg); font-weight: 600; }
+
+  /* Two-program summary */
+  .halves { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 28px 0; }
+  .half { border: 1px solid var(--line); border-left: 3px solid var(--accent); background: var(--surface); padding: 16px 18px; min-width: 0; }
+  .half h3 { margin: 0 0 4px; font-size: 1rem; font-weight: 600; }
+  .half p { margin: 0 0 8px; color: var(--muted); font-size: 0.9rem; }
+  .half code { font-size: 0.85rem; }
+
+  /* Sections */
+  section { padding-block: 10px; }
+  h2 {
+    font-size: 1.45rem; font-weight: 700; letter-spacing: -0.015em;
+    margin: 44px 0 6px; padding-top: 22px; border-top: 1px solid var(--line);
+    display: flex; gap: 14px; align-items: baseline; text-wrap: balance;
+  }
+  h2 .num {
+    font-family: var(--font-mono); font-size: 0.95rem; font-weight: 500;
+    color: var(--accent); flex: none; padding-top: 2px;
+  }
+  h3 { font-size: 1.04rem; font-weight: 600; margin: 28px 0 6px; }
+  h4 { font-size: 0.95rem; font-weight: 600; margin: 20px 0 4px; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 14px; padding-left: 1.3rem; }
+  li { margin-bottom: 7px; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  strong { font-weight: 600; }
+
+  code {
+    font-family: var(--font-mono); font-size: 0.875em;
+    background: var(--surface-2); padding: 0.12em 0.36em; border-radius: 3px;
+  }
+
+  /* Code blocks */
+  .code { position: relative; margin: 0 0 18px; }
+  .code pre {
+    margin: 0; overflow-x: auto; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 4px;
+    padding: 14px 16px; font-family: var(--font-mono);
+    font-size: 0.85rem; line-height: 1.6;
+  }
+  .code pre code { background: none; padding: 0; font-size: inherit; }
+  .copy {
+    position: absolute; top: 7px; right: 7px;
+    font-family: var(--font-sans); font-size: 0.72rem; font-weight: 500;
+    color: var(--muted); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 3px;
+    padding: 3px 9px; cursor: pointer; opacity: 0; transition: opacity 0.15s;
+  }
+  .code:hover .copy, .copy:focus-visible { opacity: 1; }
+  .copy.done { color: var(--ok); border-color: var(--ok-line); }
+
+  /* Callouts */
+  .note {
+    border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    background: var(--surface); padding: 14px 18px; margin: 0 0 18px;
+  }
+  .note.warn { border-color: var(--warn-line); border-left-color: var(--warn); background: var(--warn-bg); }
+  .note.stop { border-color: var(--stop-line); border-left-color: var(--stop); background: var(--stop-bg); }
+  .note.ok { border-color: var(--ok-line); border-left-color: var(--ok); background: var(--ok-bg); }
+  .note > :last-child { margin-bottom: 0; }
+  .note-label {
+    font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 500; display: block; margin-bottom: 5px;
+  }
+  .note .note-label { color: var(--accent); }
+  .note.warn .note-label { color: var(--warn); }
+  .note.stop .note-label { color: var(--stop); }
+  .note.ok .note-label { color: var(--ok); }
+
+  /* Tables */
+  .scroll { overflow-x: auto; margin: 0 0 18px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+    border-bottom: 1px solid var(--fg);
+  }
+  td code { white-space: nowrap; }
+
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li {
+    padding-left: 26px; position: relative; margin-bottom: 9px;
+  }
+  .checklist li::before {
+    content: ""; position: absolute; left: 0; top: 0.5em;
+    width: 11px; height: 11px; border: 1.5px solid var(--accent); border-radius: 2px;
+  }
+
+  footer {
+    margin-top: 52px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-size: 0.85rem; color: var(--muted);
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Reusable Field Service A2A Asset</p>
+    <h1>Running the POC on your machine</h1>
+    <p class="standfirst">
+      A complete setup path for the CMTPlay My Day dashboard and the Property
+      Upsell Agent, starting from an empty folder.
+    </p>
+    <div class="meta-row">
+      <span><b>Time</b> ~90 min, mostly Salesforce</span>
+      <span><b>Second machine</b> ~20 min</span>
+      <span><b>Platform</b> Windows / PowerShell</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="num">00</span><span>What you are setting up</span></h2>
+    <p>
+      Two programs that run side by side in separate terminals. The app asks the
+      agent for product recommendations over the A2A protocol, so the upsell
+      feature does nothing unless both are running.
+    </p>
+
+    <div class="halves">
+      <div class="half">
+        <h3>The app</h3>
+        <p>Next.js dashboard and Copilot. Talks to Salesforce.</p>
+        <code>localhost:3000</code>
+      </div>
+      <div class="half">
+        <h3>The agent</h3>
+        <p>Python service holding the product catalogue.</p>
+        <code>127.0.0.1:8001</code>
+      </div>
+    </div>
+
+    <p>
+      Steps 1 to 4 can be done while you wait for Salesforce in step 5, which has
+      a propagation delay of up to 30 minutes.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">01</span><span>Install the prerequisites</span></h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Requirement</th><th>Check with</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Node.js 20+</td><td><code>node --version</code></td><td>Verified on Node 24</td></tr>
+          <tr><td>Python 3.11+</td><td><code>python --version</code></td><td>Verified on 3.14.6</td></tr>
+          <tr><td>Git</td><td><code>git --version</code></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Use <strong>PowerShell</strong>, not Command Prompt. Every command below assumes it.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span><span>Clone and install</span></h2>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>git clone https://github.com/ItiSharmaAccenture/ReusableFTA2AAsset.git
+cd ReusableFTA2AAsset
+npm install</code></pre>
+    </div>
+    <p>
+      <code>npm install</code> takes a few minutes. Warnings are normal; errors
+      are not.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span><span>Create a Gemini API key</span></h2>
+    <p>The Copilot's reasoning runs on Gemini. The free tier is enough.</p>
+    <ol>
+      <li>Open <a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a></li>
+      <li>Sign in with a Google account</li>
+      <li><strong>Create API key</strong>, then copy it somewhere safe</li>
+    </ol>
+    <p>You will paste it into <code>.env.local</code> in step 6.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">04</span><span>Create an OpenRouter key</span></h2>
+    <p>
+      The agent's reasoning runs through OpenRouter, a router sitting in front of
+      many model providers. You do <strong>not</strong> need to add credits.
+    </p>
+    <ol>
+      <li>Sign up at <a href="https://openrouter.ai">openrouter.ai</a> (Google or GitHub sign-in works)</li>
+      <li>Go to <a href="https://openrouter.ai/keys">openrouter.ai/keys</a></li>
+      <li><strong>Create Key</strong>, name it <code>property-upsell-agent</code></li>
+      <li>Copy the key. It starts <code>sk-or-v1-</code> and is shown <strong>only once</strong></li>
+    </ol>
+
+    <h3>Two limits that will bite you</h3>
+
+    <div class="note warn">
+      <span class="note-label">Free models only</span>
+      <p>
+        With no credits on the account, any model without a <code>:free</code>
+        suffix returns HTTP 402. Everything here is configured for
+        <code>:free</code> models, so this is fine — but do not "helpfully"
+        change the model id to a paid one.
+      </p>
+    </div>
+
+    <div class="note stop">
+      <span class="note-label">50 requests per day, account-wide</span>
+      <p>
+        The free tier allows 50 requests per day across <em>all</em>
+        <code>:free</code> models combined, and each upsell question is one
+        request. This is counted per <strong>account</strong>, so a team sharing
+        one key shares the 50 between them.
+      </p>
+      <p>
+        <strong>Create your own key.</strong> A shared key runs out during
+        rehearsal and the demo then fails with a provider error.
+      </p>
+    </div>
+
+    <h3>If a model starts refusing</h3>
+    <p>
+      Free models are throttled by whoever hosts them, separately from your
+      account quota, so a model that worked yesterday can start returning 429
+      today. Three verified ids are listed in <code>agent/.env.example</code>;
+      switch <code>OPENROUTER_MODEL</code> to another and restart the agent.
+    </p>
+    <p>To tell the two causes apart, check your own quota:</p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>Invoke-RestMethod -Uri "https://openrouter.ai/api/v1/key" `
+  -Headers @{ Authorization = "Bearer sk-or-v1-YOUR-KEY" }</code></pre>
+    </div>
+    <p>
+      If <code>free_model_daily_requests.remaining</code> is above zero your
+      account is fine and the model is the problem, so switch models. If it is
+      zero, you are out until the quota resets.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">05</span><span>Configure Salesforce</span></h2>
+    <p>
+      The longest part. You need <strong>System Administrator</strong> access to
+      a Salesforce org; a free Developer Edition org works.
+    </p>
+
+    <h3>5.1 — Activate the Hosted MCP server</h3>
+    <p>Setup, search <strong>MCP</strong>, and activate <code>platform/sobject-all</code> for your org.</p>
+    <div class="note stop">
+      <span class="note-label">Most common failure</span>
+      <p>
+        An inactive server lets OAuth succeed and then fails every call with 404
+        or 405. If you skip one check in this guide, do not skip this one.
+      </p>
+    </div>
+
+    <h3>5.2 — Create an External Client App</h3>
+    <p>Setup → <strong>External Client App Manager</strong> → <strong>New External Client App</strong>. Enable OAuth, then set:</p>
+    <ul>
+      <li><strong>Callback URL</strong> — <code>http://localhost:3000/api/auth/callback/salesforce</code>, character for character, port included</li>
+      <li><strong>Require Proof Key for Code Exchange (PKCE)</strong> — enabled</li>
+      <li><strong>Enable Client Credentials Flow</strong> — not needed</li>
+    </ul>
+
+    <h3>5.3 — Select OAuth scopes</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Scope</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>mcp_api</code></td><td><strong>Required.</strong> The generic <code>api</code> scope does not work with Hosted MCP</td></tr>
+          <tr><td><code>api</code></td><td><strong>Also required</strong>, for the dashboard's REST calls. Listed as <em>Manage user data via APIs (api)</em></td></tr>
+          <tr><td><code>refresh_token</code></td><td>Avoids repeating authorization</td></tr>
+          <tr><td><code>offline_access</code></td><td>Requested alongside the refresh token</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Without <code>api</code> the dashboard fails with
+      <code>401 INVALID_SCOPES</code> while the Copilot still works — a confusing
+      half-broken state that looks like a dashboard bug.
+    </p>
+
+    <h3>5.4 — Enable JWT-based access tokens</h3>
+    <p>
+      In the app's token settings, enable <strong>Issue JSON Web Token
+      (JWT)-based access tokens</strong>. Without it OAuth appears to succeed and
+      every MCP call fails with <code>INVALID_AUTH_HEADER</code> or
+      <code>INVALID_JWT_FORMAT</code>.
+    </p>
+    <div class="note">
+      <span class="note-label">Note</span>
+      <p>
+        If the same app is also used for the SOAP API or the Salesforce CLI,
+        create a <strong>separate</strong> app for those. They require opaque
+        session-ID tokens and reject JWTs.
+      </p>
+    </div>
+
+    <h3>5.5 — Keep it a public client</h3>
+    <p>
+      Leave it as a public PKCE client and leave
+      <code>SALESFORCE_CLIENT_SECRET</code> blank. Set a secret only if you
+      deliberately made it a confidential client.
+    </p>
+
+    <h3>5.6 — Permit the user</h3>
+    <p>Give the Salesforce user the app connects as:</p>
+    <ul>
+      <li>Permission to use the MCP server, via a permission set</li>
+      <li>Exactly the object and field permissions the demo needs, and no more</li>
+    </ul>
+    <div class="note warn">
+      <span class="note-label">This is the only access control</span>
+      <p>
+        The app passes requests through and lets Salesforce accept or refuse
+        them. If the demo must not write anything, make this user read-only
+        here — there is no application-side block to fall back on.
+      </p>
+    </div>
+
+    <h3>5.7 — Copy the Consumer Key</h3>
+    <p>From the app's OAuth settings. That value is your <code>SALESFORCE_CLIENT_ID</code>.</p>
+
+    <h3>5.8 — Wait</h3>
+    <p>
+      A new External Client App can take <strong>up to 30 minutes</strong> to
+      become usable. An immediate <code>invalid_client_id</code> usually just
+      means "not ready yet".
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">06</span><span>Configure the app</span></h2>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>Copy-Item .env.example .env.local</code></pre>
+    </div>
+    <p>Open <code>.env.local</code> and fill in:</p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>GEMINI_API_KEY=&lt;from step 3&gt;
+GEMINI_MODEL=gemini-flash-latest
+
+SALESFORCE_CLIENT_ID=&lt;Consumer Key from 5.7&gt;
+SALESFORCE_CLIENT_SECRET=
+SALESFORCE_LOGIN_URL=https://login.salesforce.com
+SALESFORCE_REDIRECT_URI=http://localhost:3000/api/auth/callback/salesforce
+SALESFORCE_SCOPES=mcp_api,api,refresh_token,offline_access
+
+SALESFORCE_MCP_URLS=https://api.salesforce.com/platform/mcp/v1/platform/sobject-all
+
+A2A_UPSELL_AGENT_URL=http://127.0.0.1:8001
+
+SETUP_SECRET=&lt;generate below&gt;</code></pre>
+    </div>
+
+    <p>Generate the setup secret:</p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code></pre>
+    </div>
+
+    <h3>Pick the right MCP URL for your org type</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Org type</th><th>Path after <code>https://api.salesforce.com/platform</code></th></tr></thead>
+        <tbody>
+          <tr><td>Production / Developer Edition</td><td><code>/mcp/v1/platform/sobject-all</code></td></tr>
+          <tr><td>Sandbox</td><td><code>/mcp/v1/sandbox/platform/sobject-all</code></td></tr>
+          <tr><td>My Domain (required if login.salesforce.com is disabled)</td><td><code>/mcp/v1/d/&lt;mydomain&gt;/platform/sobject-all</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Using the production path against a sandbox fails to connect.</p>
+
+    <div class="note">
+      <span class="note-label">By design</span>
+      <p>
+        <code>A2A_UPSELL_AGENT_URL</code> has <strong>no default</strong>. Leave
+        it out and the Copilot says product recommendations are not configured,
+        rather than failing against a localhost that would be dead on a deployed
+        instance.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">07</span><span>Set up the agent</span></h2>
+
+    <h3>7.1 — Get the catalogue PDF</h3>
+    <div class="note warn">
+      <span class="note-label">Not in the repository</span>
+      <p>
+        The catalogue is excluded by policy. Ask the project owner for
+        <code>security_product_catalogue.pdf</code> and put it in
+        <code>agent/catalog/</code>.
+      </p>
+    </div>
+    <p>
+      The folder must hold <strong>exactly one</strong> PDF. With none or
+      several, the agent refuses to start and says which, rather than guessing
+      which to read. The PDF needs real extractable text — a scanned image will
+      not work, as there is no OCR step.
+    </p>
+
+    <h3>7.2 — Install and configure</h3>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>cd agent
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env</code></pre>
+    </div>
+    <p>Open <code>agent/.env</code> and set your key:</p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>OPENROUTER_API_KEY=&lt;from step 4&gt;</code></pre>
+    </div>
+    <p>
+      Leave <code>OPENROUTER_MODEL</code> alone — it already names a verified
+      working model.
+    </p>
+
+    <h3>7.3 — Start it</h3>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8001</code></pre>
+    </div>
+    <p>A banner confirms what it loaded:</p>
+    <div class="code">
+<pre><code>[Property Upsell Agent] ready
+  catalogue : security_product_catalogue.pdf (1 pages, 2,431 chars)
+  provider  : openrouter
+  model     : openrouter/nvidia/nemotron-3.5-lightning:free
+  agent card: http://127.0.0.1:8001/.well-known/agent-card.json</code></pre>
+    </div>
+    <p><strong>Leave this terminal open.</strong> The agent runs in the foreground.</p>
+
+    <p>Verify the card from a second terminal:</p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>Invoke-RestMethod http://127.0.0.1:8001/.well-known/agent-card.json |
+  ConvertTo-Json -Depth 5</code></pre>
+    </div>
+    <p>
+      It must publish a skill with id
+      <code>property_upsell_recommendations</code> — that is what the app matches
+      on.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">08</span><span>Authorize Salesforce</span></h2>
+    <p>In a <strong>new terminal</strong>, from the repository root:</p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>npm run dev</code></pre>
+    </div>
+
+    <div class="note warn">
+      <span class="note-label">Expect this</span>
+      <p>
+        The first start <strong>stops itself</strong> with a Next.js security
+        advisory saying "Retry the same command to continue." Run
+        <code>npm run dev</code> again and it stays up. This happens on every
+        cold start, including <code>npm run build</code>.
+      </p>
+    </div>
+
+    <p>Then open this once in a browser, using your real <code>SETUP_SECRET</code>:</p>
+    <div class="code">
+<pre><code>http://localhost:3000/api/auth/salesforce?secret=&lt;SETUP_SECRET&gt;</code></pre>
+    </div>
+    <p>
+      Log in as the Salesforce user and approve. Tokens are written to
+      <code>.local/</code>, which is git-ignored. You do this once.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">09</span><span>Map a technician</span></h2>
+    <p>
+      The dashboard shows nothing until a technician ID is mapped to a Salesforce
+      <strong>ServiceResource</strong>.
+    </p>
+
+    <h3>9.1 — Find the ServiceResource Id</h3>
+    <p>Developer Console → <strong>Query Editor</strong>:</p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>SELECT Id, Name, RelatedRecordId, IsActive
+FROM ServiceResource
+WHERE IsActive = true</code></pre>
+    </div>
+    <p>
+      Note the <code>Id</code> (starts <code>0Hn</code>) and the
+      <code>Name</code>. You need <em>both</em> — the name matters in step 10.
+    </p>
+
+    <h3>9.2 — Add the mapping</h3>
+    <p>In <code>.env.local</code>:</p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>CMTPlay_DEMO_MODE=true
+CMTPlay_TECHNICIAN_DIRECTORY=[{"technicianId":"TCH-7842","serviceResourceId":"0Hn..."}]</code></pre>
+    </div>
+    <p>
+      The technician ID is yours to choose. There is <strong>no password</strong>
+      — anyone signing in with a mapped ID sees that technician's jobs, which is
+      acceptable for a controlled POC only.
+    </p>
+
+    <h3>9.3 — Check how your org links jobs</h3>
+    <p>
+      Appointments reach a technician one of two ways and the default assumes
+      <code>AssignedResource</code>. Check yours:
+    </p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>SELECT COUNT() FROM AssignedResource WHERE ServiceResourceId = '0Hn...'</code></pre>
+    </div>
+    <p>
+      If that returns <strong>0</strong> but the resource clearly has jobs, your
+      org links them by <strong>Owner</strong> instead. Add:
+    </p>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>CMTPlay_APPOINTMENT_SOURCE=owner_query</code></pre>
+    </div>
+    <p>
+      Without this the dashboard is empty, you never open a job, and you never
+      reach the Upsell tab. Restart <code>npm run dev</code> after editing
+      <code>.env.local</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">10</span><span>Run the demo</span></h2>
+    <ol>
+      <li>Open <a href="http://localhost:3000/my-day">localhost:3000/my-day</a></li>
+      <li>Sign in</li>
+      <li>Click a job in the timeline</li>
+      <li>Open the <strong>Upsell</strong> tab</li>
+      <li>Click <strong>Recommend upsell products</strong></li>
+    </ol>
+
+    <div class="note stop">
+      <span class="note-label">Sign in with the matching name</span>
+      <p>
+        The technician <strong>ID</strong> scopes the dashboard. The Copilot
+        looks appointments up by the <strong>name</strong> you type. If the name
+        does not match the ServiceResource's name in Salesforce, upsell fails
+        with <em>"SA-nnnn was not found in the technician's schedule"</em> and
+        nothing is recommended.
+      </p>
+      <p>
+        That is correct behaviour — it refuses to guess a property — but it looks
+        like a bug in front of an audience. Use the <code>Name</code> from
+        step 9.1.
+      </p>
+    </div>
+
+    <p>
+      You should see two progress lines, then recommendations with a catalogue
+      page cited for each product.
+    </p>
+
+    <div class="note">
+      <span class="note-label">Timing</span>
+      <p>
+        A delegated turn takes <strong>50-60 seconds</strong>, because one turn
+        runs the whole catalogue through the agent's model. The timeout is 180s.
+        Do not click twice — each click spends one of your 50 daily requests.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">11</span><span>Troubleshooting</span></h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Symptom</th><th>Cause</th></tr></thead>
+        <tbody>
+          <tr><td>"not linked to a Salesforce Service Resource"</td><td>Step 9 not done, or <code>CMTPlay_DEMO_MODE</code> is not <code>true</code></td></tr>
+          <tr><td>Dashboard loads but has no jobs</td><td>Org links by Owner — set <code>CMTPlay_APPOINTMENT_SOURCE=owner_query</code></td></tr>
+          <tr><td>"SA-nnnn was not found in the technician's schedule"</td><td>Sign-in name does not match the ServiceResource name</td></tr>
+          <tr><td>"product recommendation agent is not configured"</td><td><code>A2A_UPSELL_AGENT_URL</code> missing from <code>.env.local</code></td></tr>
+          <tr><td>"could not be reached. It may not be running"</td><td>The agent's terminal has closed</td></tr>
+          <tr><td>"could not reach its own language model"</td><td>Model throttled, or the 50/day quota is exhausted — see step 4</td></tr>
+          <tr><td>Dev server exits immediately</td><td>The Next.js advisory. Run <code>npm run dev</code> again</td></tr>
+          <tr><td><code>401 INVALID_SCOPES</code> on the dashboard</td><td><code>api</code> scope missing — redo 5.3 and re-authorize</td></tr>
+          <tr><td><code>INVALID_JWT_FORMAT</code> on MCP calls</td><td>JWT tokens not enabled — see 5.4</td></tr>
+          <tr><td><code>invalid_client_id</code> right after setup</td><td>Propagation delay — wait up to 30 minutes</td></tr>
+          <tr><td>Agent will not start, complains about the catalogue</td><td>Not exactly one PDF in <code>agent/catalog/</code>, or it is a scan with no text</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Checking both halves are alive</h3>
+    <div class="code">
+      <button class="copy" type="button">Copy</button>
+<pre><code>Invoke-RestMethod http://localhost:3000/api/config
+Invoke-RestMethod http://127.0.0.1:8001/.well-known/agent-card.json</code></pre>
+    </div>
+    <p>
+      The first returns a Copilot mode, the second the agent card. If either
+      fails, that half is down.
+    </p>
+  </section>
+
+  <section>
+    <h2><span class="num">12</span><span>Never commit these</span></h2>
+    <p>All are already covered by <code>.gitignore</code>, but worth knowing by name:</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>File</th><th>Contains</th></tr></thead>
+        <tbody>
+          <tr><td><code>.env.local</code></td><td>Gemini key, Salesforce Consumer Key, setup secret</td></tr>
+          <tr><td><code>agent/.env</code></td><td>Your live OpenRouter key</td></tr>
+          <tr><td><code>.local/salesforce-tokens.json</code></td><td>Live Salesforce OAuth tokens</td></tr>
+          <tr><td><code>agent/catalog/*.pdf</code></td><td>The catalogue, excluded by policy</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note stop">
+      <span class="note-label">The repository is public</span>
+      <p>
+        If a key is ever committed, treat it as compromised: revoke it at the
+        provider first, then deal with the git history.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">13</span><span>Pre-demo checklist</span></h2>
+    <ul class="checklist">
+      <li>Agent terminal open, banner showing the catalogue and model</li>
+      <li>App terminal open, survived the advisory retry</li>
+      <li>Agent card returns the <code>property_upsell_recommendations</code> skill</li>
+      <li>Signed in with the name matching the ServiceResource</li>
+      <li>Dashboard shows today's jobs</li>
+      <li>One upsell run completed today, so nothing is cold</li>
+      <li>OpenRouter quota checked — enough of the 50 left for the session</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>
+      Deeper detail on how the two halves fit together is in the architecture
+      explainer. Repository-specific conventions for Claude Code are in
+      <code>CLAUDE.md</code>.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+  document.querySelectorAll('.copy').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var pre = button.parentElement.querySelector('pre');
+      if (!pre) return;
+      var text = pre.innerText;
+      var done = function () {
+        button.textContent = 'Copied';
+        button.classList.add('done');
+        setTimeout(function () {
+          button.textContent = 'Copy';
+          button.classList.remove('done');
+        }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { select(pre); });
+      } else {
+        select(pre);
+      }
+    });
+  });
+
+  function select(pre) {
+    var range = document.createRange();
+    range.selectNodeContents(pre);
+    var selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+</script>

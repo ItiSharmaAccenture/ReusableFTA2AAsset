@@ -1,0 +1,657 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>How the A2A Upsell Works</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: reading column with full-width diagram bands; the lifecycle is a
+     numbered lane diagram because the order of the calls is the explanation. */
+  :root {
+    --bg: #fbfaff;
+    --surface: #ffffff;
+    --surface-2: #f4f1fb;
+    --fg: #1c1826;
+    --muted: #615a72;
+    --line: #e3ddf0;
+    --accent: #6d28d9;
+    --accent-soft: #ede6fd;
+    --sf: #0b6b9b;
+    --sf-soft: #e4f2f9;
+    --agent: #a2560b;
+    --agent-soft: #fdf0e0;
+    --stop: #9f1239;
+    --stop-bg: #fff1f4;
+    --stop-line: #f7c6d2;
+    --ok: #15803d;
+    --ok-bg: #f0fdf4;
+    --ok-line: #bbf0ca;
+    --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141221;
+      --surface: #1c1930;
+      --surface-2: #242038;
+      --fg: #ece9f5;
+      --muted: #a79fbd;
+      --line: #322c4a;
+      --accent: #c4a5ff;
+      --accent-soft: #2c2347;
+      --sf: #7cc8ea;
+      --sf-soft: #122934;
+      --agent: #f0b872;
+      --agent-soft: #2e2113;
+      --stop: #fda4b4;
+      --stop-bg: #2c1420;
+      --stop-line: #572236;
+      --ok: #86efac;
+      --ok-bg: #11291b;
+      --ok-line: #24512f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141221;
+    --surface: #1c1930;
+    --surface-2: #242038;
+    --fg: #ece9f5;
+    --muted: #a79fbd;
+    --line: #322c4a;
+    --accent: #c4a5ff;
+    --accent-soft: #2c2347;
+    --sf: #7cc8ea;
+    --sf-soft: #122934;
+    --agent: #f0b872;
+    --agent-soft: #2e2113;
+    --stop: #fda4b4;
+    --stop-bg: #2c1420;
+    --stop-line: #572236;
+    --ok: #86efac;
+    --ok-bg: #11291b;
+    --ok-line: #24512f;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.65;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 72px;
+  }
+  .wrap { max-width: 52rem; margin: 0 auto; }
+
+  .masthead { padding-block: 44px 30px; border-bottom: 2px solid var(--fg); }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(2rem, 6vw, 3rem); line-height: 1.06; font-weight: 700;
+    letter-spacing: -0.028em; text-wrap: balance; margin: 0 0 16px;
+  }
+  .standfirst { font-size: 1.12rem; color: var(--muted); margin: 0; max-width: 44rem; }
+
+  h2 {
+    font-size: 1.5rem; font-weight: 700; letter-spacing: -0.018em;
+    margin: 50px 0 10px; padding-top: 24px; border-top: 1px solid var(--line);
+    text-wrap: balance;
+  }
+  h3 { font-size: 1.06rem; font-weight: 600; margin: 30px 0 7px; }
+  p { margin: 0 0 15px; }
+  ul, ol { margin: 0 0 15px; padding-left: 1.3rem; }
+  li { margin-bottom: 8px; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+
+  code {
+    font-family: var(--font-mono); font-size: 0.875em;
+    background: var(--surface-2); padding: 0.12em 0.36em; border-radius: 3px;
+  }
+  .scroll { overflow-x: auto; margin: 0 0 20px; }
+  .scroll pre {
+    margin: 0; background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 4px; padding: 16px; font-family: var(--font-mono);
+    font-size: 0.82rem; line-height: 1.55;
+  }
+  .scroll pre code { background: none; padding: 0; font-size: inherit; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+    border-bottom: 1px solid var(--fg);
+  }
+
+  /* Ownership split */
+  .owners { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 26px 0 8px; }
+  .owner { border: 1px solid var(--line); background: var(--surface); padding: 18px 20px; min-width: 0; }
+  .owner.sf { border-top: 3px solid var(--sf); }
+  .owner.ag { border-top: 3px solid var(--agent); }
+  .owner h3 { margin: 0 0 3px; font-size: 1.05rem; }
+  .owner .who { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 9px; }
+  .owner.sf .who { color: var(--sf); }
+  .owner.ag .who { color: var(--agent); }
+  .owner ul { margin: 0; padding-left: 1.1rem; font-size: 0.92rem; }
+  .owner li { margin-bottom: 5px; }
+
+  /* Lifecycle lanes */
+  .lifecycle { margin: 26px 0 22px; display: flex; flex-direction: column; gap: 2px; }
+  .lane {
+    display: grid; grid-template-columns: 2.6rem 8.5rem 1fr; gap: 14px;
+    align-items: start; padding: 13px 16px; background: var(--surface);
+    border: 1px solid var(--line); border-left: 3px solid var(--line);
+  }
+  .lane.app { border-left-color: var(--accent); }
+  .lane.sf { border-left-color: var(--sf); background: var(--sf-soft); }
+  .lane.ag { border-left-color: var(--agent); background: var(--agent-soft); }
+  .lane .step {
+    font-family: var(--font-mono); font-size: 0.82rem; font-weight: 500;
+    color: var(--muted); padding-top: 1px;
+  }
+  .lane .actor {
+    font-family: var(--font-mono); font-size: 0.74rem; font-weight: 500;
+    letter-spacing: 0.04em; text-transform: uppercase; padding-top: 2px;
+  }
+  .lane.app .actor { color: var(--accent); }
+  .lane.sf .actor { color: var(--sf); }
+  .lane.ag .actor { color: var(--agent); }
+  .lane .what { font-size: 0.93rem; min-width: 0; }
+  .lane .what b { font-weight: 600; }
+  .lane .what span { display: block; color: var(--muted); font-size: 0.85rem; margin-top: 2px; }
+  @media (max-width: 560px) {
+    .lane { grid-template-columns: 2.2rem 1fr; }
+    .lane .actor { grid-column: 2; padding-top: 0; }
+    .lane .what { grid-column: 2; }
+  }
+
+  /* Callouts */
+  .note {
+    border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    background: var(--surface); padding: 15px 18px; margin: 0 0 20px;
+  }
+  .note.stop { border-color: var(--stop-line); border-left-color: var(--stop); background: var(--stop-bg); }
+  .note.ok { border-color: var(--ok-line); border-left-color: var(--ok); background: var(--ok-bg); }
+  .note > :last-child { margin-bottom: 0; }
+  .note-label {
+    font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 500; display: block; margin-bottom: 6px;
+    color: var(--accent);
+  }
+  .note.stop .note-label { color: var(--stop); }
+  .note.ok .note-label { color: var(--ok); }
+
+  /* Field contract */
+  .fields {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 7px; margin: 0 0 20px; padding: 0; list-style: none;
+  }
+  .fields li {
+    font-family: var(--font-mono); font-size: 0.8rem; margin: 0;
+    background: var(--accent-soft); color: var(--fg);
+    padding: 7px 11px; border-radius: 3px; min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  footer { margin-top: 54px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 0.88rem; color: var(--muted); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Reusable Field Service A2A Asset</p>
+    <h1>How the A2A upsell works</h1>
+    <p class="standfirst">
+      Two systems, one question. What each one owns, how a recommendation travels
+      between them, and why it refuses to answer when it cannot verify a
+      property.
+    </p>
+  </header>
+
+  <section>
+    <h2>The problem this solves</h2>
+    <p>
+      A technician standing in a customer's house asks a reasonable question:
+      <em>what else could I sell here?</em> Answering it well needs two kinds of
+      knowledge that live in different places.
+    </p>
+    <p>
+      <strong>Facts about this customer</strong> — the property's size, how many
+      bedrooms, what security system is already fitted — are Salesforce's. They
+      are records, they change, and Salesforce is the system of record.
+    </p>
+    <p>
+      <strong>Knowledge of the products</strong> — what the catalogue offers,
+      what suits a townhome with an existing command panel — is not in Salesforce
+      at all. It lives in a PDF catalogue that changes on its own schedule.
+    </p>
+    <p>
+      Earlier versions answered this with an Apex action inside Salesforce, which
+      meant the product reasoning had to be maintained there. The A2A version
+      splits it: Salesforce keeps the customer, a separate agent keeps the
+      products, and neither implements the other's half.
+    </p>
+  </section>
+
+  <section>
+    <h2>Who owns what</h2>
+
+    <div class="owners">
+      <div class="owner sf">
+        <span class="who">Salesforce</span>
+        <h3>The customer</h3>
+        <ul>
+          <li>Accounts and contacts</li>
+          <li>Properties and their fields</li>
+          <li>Service appointments and schedules</li>
+          <li>Work orders, parts, van stock</li>
+          <li><strong>All access control</strong></li>
+        </ul>
+      </div>
+      <div class="owner ag">
+        <span class="who">Property Upsell Agent</span>
+        <h3>The products</h3>
+        <ul>
+          <li>The PDF catalogue</li>
+          <li>Which products suit which property</li>
+          <li>Page citations for every claim</li>
+          <li>What still needs onsite checking</li>
+          <li><strong>Nothing about any customer</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="note-label">The load-bearing rule</span>
+      <p>
+        The agent is <strong>never asked to look anything up</strong>. The app
+        gathers the property facts from Salesforce and sends them. An agent that
+        could query Salesforce itself would duplicate the integration and blur
+        who is responsible for a wrong answer.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>One upsell turn, end to end</h2>
+    <p>
+      What happens between clicking <strong>Recommend upsell products</strong>
+      and seeing the list. Colour marks which system is working.
+    </p>
+
+    <div class="lifecycle">
+      <div class="lane app">
+        <span class="step">01</span><span class="actor">Browser</span>
+        <span class="what"><b>Sends the message and the appointment Id</b>
+        <span>POST /api/copilot, streamed back as server-sent events</span></span>
+      </div>
+      <div class="lane app">
+        <span class="step">02</span><span class="actor">Route</span>
+        <span class="what"><b>Establishes who is asking</b>
+        <span>Identity comes from the signed cookie, never the request body, so a turn cannot claim to be another technician</span></span>
+      </div>
+      <div class="lane sf">
+        <span class="step">03</span><span class="actor">Salesforce</span>
+        <span class="what"><b>Confirms the appointment belongs to this technician</b>
+        <span>An unverified appointment Id is dropped rather than trusted</span></span>
+      </div>
+      <div class="lane app">
+        <span class="step">04</span><span class="actor">Copilot</span>
+        <span class="what"><b>Recognises the upsell intent</b>
+        <span>Either the exact button phrase, matched deterministically, or Gemini choosing the <code>recommend_upsell_products</code> tool</span></span>
+      </div>
+      <div class="lane sf">
+        <span class="step">05</span><span class="actor">Salesforce</span>
+        <span class="what"><b>Appointment to account name</b>
+        <span>Via the schedule tool, discovered from published MCP schemas</span></span>
+      </div>
+      <div class="lane sf">
+        <span class="step">06</span><span class="actor">Salesforce</span>
+        <span class="what"><b>Account name to property records</b>
+        <span>The account summary tool returns that account's properties and their fields</span></span>
+      </div>
+      <div class="lane app">
+        <span class="step">07</span><span class="actor">Mapping</span>
+        <span class="what"><b>Fields mapped onto the seven-field contract</b>
+        <span>Whatever the org calls them. A field Salesforce did not return is <em>omitted</em>, never defaulted</span></span>
+      </div>
+      <div class="lane ag">
+        <span class="step">08</span><span class="actor">A2A</span>
+        <span class="what"><b>Agent card resolved, then the task sent</b>
+        <span>Discovery is cached for five minutes; the card must publish the expected skill id</span></span>
+      </div>
+      <div class="lane ag">
+        <span class="step">09</span><span class="actor">Agent</span>
+        <span class="what"><b>Reasons over the catalogue</b>
+        <span>Verified fields and request prose are split into separate blocks before the model sees either</span></span>
+      </div>
+      <div class="lane app">
+        <span class="step">10</span><span class="actor">Copilot</span>
+        <span class="what"><b>Presents the reply as data</b>
+        <span>Product names and page citations kept verbatim; nothing added that the agent did not say</span></span>
+      </div>
+    </div>
+
+    <p>
+      Steps 5 to 7 are the part people underestimate. If any of them fails, the
+      agent is <strong>not called at all</strong> and the Copilot explains why.
+      A recommendation with no verified property behind it is exactly what this
+      path exists to prevent.
+    </p>
+  </section>
+
+  <section>
+    <h2>The seven-field contract</h2>
+    <p>
+      The two systems agree on precisely seven fields. These are what the agent
+      treats as established fact:
+    </p>
+
+    <ul class="fields">
+      <li>Property_Size__c</li>
+      <li>Bedrooms__c</li>
+      <li>Bathrooms__c</li>
+      <li>Year_Built__c</li>
+      <li>Property_Type__c</li>
+      <li>Security_System_Base__c</li>
+      <li>Monitoring_Status__c</li>
+    </ul>
+
+    <p>
+      Anything else in the message — the account name, the property's own name,
+      the job description — reaches the agent as <em>prose</em>, where it is
+      treated as caller-supplied text rather than verified fact. That separation
+      is deliberate: a caller cannot smuggle an eighth property fact in by
+      writing it into a sentence.
+    </p>
+
+    <h3>Why a name-mapping layer exists</h3>
+    <p>
+      Orgs spell these differently. A custom MCP server returns
+      <code>propertySizeSqFt</code>; an org exposing the custom fields directly
+      returns <code>Property_Size__c</code>. Both normalise to the same entry, so
+      neither needs a code change:
+    </p>
+    <div class="scroll">
+<pre><code>Property_Size__c  ←  propertysize, propertysizesqft, propertysizesquarefeet,
+                     squarefeet, sqft, size
+Bedrooms__c       ←  bedrooms, bedroomcount, numberofbedrooms, beds
+Monitoring_Status__c ← monitoringstatus, monitoring</code></pre>
+    </div>
+    <p>
+      Comparison strips the <code>__c</code> suffix, removes punctuation and
+      lowercases, so <code>Property_Size__c</code>, <code>propertySizeSqFt</code>
+      and <code>property_size</code> all compare equal.
+    </p>
+
+    <div class="note">
+      <span class="note-label">Absent is not zero</span>
+      <p>
+        A field the org did not return is left out of the payload entirely. The
+        agent is told it is unknown and instructed not to guess it, and reports
+        it under <em>Onsite Verification</em> instead. Nothing in this path ever
+        invents a value.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Two ways in, on purpose</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Trigger</th><th>Path</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The Upsell tab button and the suggested chip, both sending the exact phrase <code>Recommend upsell products</code></td>
+            <td>A deterministic intent match, before the model is involved</td>
+            <td>The demo cannot fail because a model declined to pick a tool</td>
+          </tr>
+          <tr>
+            <td>Any other wording — <em>"what could I sell in the kitchen?"</em></td>
+            <td>Gemini chooses <code>recommend_upsell_products</code>, offered beside the Salesforce tools</td>
+            <td>Natural questions still work without enumerating phrasings</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The delegation tool deliberately <strong>takes no arguments</strong>. The
+      model cannot pass a property fact, a product name or a room, because the
+      app finds the property itself. There is nothing for a model to get wrong.
+    </p>
+  </section>
+
+  <section>
+    <h2>Two trust boundaries</h2>
+    <p>
+      Both systems treat incoming content as data. Neither follows instructions
+      found inside it.
+    </p>
+
+    <h3>Salesforce record content, entering the Copilot</h3>
+    <p>
+      A customer name or a work-order description is text somebody typed into a
+      CRM. It arrives wrapped as tool output, quoted rather than obeyed, so a
+      record containing <em>"ignore previous instructions"</em> is just a string.
+    </p>
+
+    <h3>The agent's reply, entering the Copilot</h3>
+    <p>
+      An agent-to-agent channel is another injection surface, so the reply is
+      wrapped exactly as tool output is. The Copilot is instructed to keep the
+      agent's product names and page citations verbatim, add nothing it did not
+      state, and never let it widen the scope of the conversation.
+    </p>
+
+    <h3>The caller's message, entering the agent</h3>
+    <p>
+      Before each model call the agent splits the request in two: the seven
+      whitelisted fields taken from the structured object, and everything else
+      labelled as request text. On top of that it is instructed never to invent
+      products, prices or specifications, never to infer sensor counts from a
+      general system description, and to cite a catalogue page for every
+      recommendation.
+    </p>
+
+    <div class="note stop">
+      <span class="note-label">What this costs</span>
+      <p>
+        These rules are why the system sometimes says <em>"I couldn't look up
+        the customer's property, so I haven't asked for recommendations"</em>.
+        That is the design working. A system that always produces a confident
+        list is one that guesses.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>No tool names in the code</h2>
+    <p>
+      The Copilot does not know what the org's appointment tool is called.
+      Capabilities are resolved from the <em>published schemas</em> returned by
+      MCP discovery: which tool lists appointments, which sets a status, which
+      closes a job. An org can rename its actions, or activate a custom MCP
+      server, and nothing here needs editing.
+    </p>
+    <p>
+      The same idea applies across the A2A boundary. The app asks for a skill id,
+      and falls back to matching on what the published skill says it does. A card
+      without a matching skill fails at <em>discovery</em> rather than at the
+      first request, so a misconfiguration surfaces immediately.
+    </p>
+    <p>
+      Environment overrides exist for orgs whose schemas say too little to infer
+      from, but a value matching nothing leaves the capability unresolved rather
+      than guessing.
+    </p>
+  </section>
+
+  <section>
+    <h2>Inside the agent</h2>
+    <p>
+      A standalone Google ADK agent with <strong>no tools</strong>. It takes no
+      actions, calls nothing, and modifies no records. It answers one question
+      from one document.
+    </p>
+
+    <div class="scroll">
+<pre><code>A2A client  ──▶  ADK agent  ──▶  OpenRouter (via LiteLLM)
+                     │
+                     └── catalog/&lt;one&gt;.pdf   text extracted at startup</code></pre>
+    </div>
+
+    <h3>The catalogue</h3>
+    <p>
+      At startup the PDF's text is extracted page by page and placed in the
+      agent's instructions, with page markers so citations name real pages. There
+      is no vector store, no embedding and no chunking — the catalogue is assumed
+      small enough for the model context.
+    </p>
+    <p>
+      Startup fails with an explicit message if the folder holds no PDF or more
+      than one, if the PDF has no extractable text, or if the text exceeds the
+      configured cap. It never falls back to invented product data.
+    </p>
+
+    <h3>The agent card</h3>
+    <p>
+      The protocol work is the SDK's, not hand-written. ADK's
+      <code>to_a2a()</code> mounts the JSON-RPC endpoint and serves the card at
+      <code>/.well-known/agent-card.json</code>. The card is then renamed, since
+      ADK names it after the Python agent id and calls its single skill
+      <code>model</code>, neither of which is useful to a caller.
+    </p>
+
+    <h3>Provider handling</h3>
+    <p>
+      The model provider is reached through LiteLLM, so switching between
+      OpenRouter and Groq is an environment change rather than a code change. Two
+      details matter in practice:
+    </p>
+    <ul>
+      <li>
+        Models that emit reasoning traces have those stripped before the response
+        leaves the agent, so internal deliberation never reaches a technician.
+      </li>
+      <li>
+        A provider failure is reported as a readable operator message rather than
+        a stack trace. The app recognises that message and retries once, because
+        free-tier endpoints drop streamed connections intermittently.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>What is cached, and why</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Cached</th><th>For</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td>Agent card and client</td><td>5 minutes</td><td>Otherwise every turn pays a discovery round trip on top of the MCP handshake</td></tr>
+          <tr><td>MCP discovery and capabilities</td><td>Short TTL</td><td>Same reason, same trade-off</td></tr>
+          <tr><td>Dashboard appointments</td><td>Short TTL, per technician and range</td><td>Keyed by identity, so one technician cannot read another's</td></tr>
+          <tr><td>Seen appointments</td><td>Per technician</td><td>A job stays reachable after it leaves the Scheduled list</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The agent client cache is dropped whenever a delegation throws. A stale
+      client pointed at a restarted agent is far more expensive than one extra
+      discovery call.
+    </p>
+  </section>
+
+  <section>
+    <h2>How it fails</h2>
+    <p>
+      Every failure names a stage, so a log line says where it broke and the
+      technician sees something they can act on.
+    </p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Stage</th><th>Means</th><th>Retried</th></tr></thead>
+        <tbody>
+          <tr><td><code>not_configured</code></td><td>No agent URL set for this app</td><td>No</td></tr>
+          <tr><td><code>discovery</code></td><td>The card could not be resolved; the agent may not be running</td><td>Yes</td></tr>
+          <tr><td><code>skill</code></td><td>The agent answered but offers no product recommendations</td><td>No</td></tr>
+          <tr><td><code>request</code></td><td>The task call itself failed twice</td><td>Already retried</td></tr>
+          <tr><td><code>empty</code></td><td>The agent returned nothing</td><td>Already retried</td></tr>
+          <tr><td><code>agent_model</code></td><td>The agent could not reach its own model — throttled or out of quota</td><td>Already retried</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Before any of these, the property lookup can decide not to delegate: no
+      appointment selected, no account name on the appointment, or no connected
+      tool that returns property details. Each is reported with its reason, and
+      no products are suggested.
+    </p>
+  </section>
+
+  <section>
+    <h2>Where the code lives</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>File</th><th>Responsibility</th></tr></thead>
+        <tbody>
+          <tr><td><code>lib/upsell-agent.ts</code></td><td>The only path to the agent. Discovery, caching, the task call, retry</td></tr>
+          <tr><td><code>lib/upsell-payload.ts</code></td><td>The seven-field contract and the name mapping</td></tr>
+          <tr><td><code>lib/copilot.ts</code></td><td>Intent detection, property lookup, delegation, presentation</td></tr>
+          <tr><td><code>lib/gemini.ts</code></td><td>Tool orchestration; local tools offered beside MCP tools</td></tr>
+          <tr><td><code>lib/config.ts</code></td><td>Every setting, read from the environment</td></tr>
+          <tr><td><code>agent/agent.py</code></td><td>The agent, its instructions and its trust boundary</td></tr>
+          <tr><td><code>agent/catalog_loader.py</code></td><td>PDF text extraction with page markers</td></tr>
+          <tr><td><code>agent/main.py</code></td><td>Agent card and ASGI app via ADK's <code>to_a2a()</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      If two tools would answer the same question — the agent and an upsell Apex
+      action still published by the org — withdraw the Apex one with
+      <code>SALESFORCE_TOOL_BLOCKLIST</code>. Two implementations competing for
+      one question is a reliability problem, not a redundancy benefit.
+    </p>
+  </section>
+
+  <section>
+    <h2>Known limits</h2>
+    <p>
+      Worth stating plainly, because each is a real constraint on what this POC
+      can become.
+    </p>
+    <ul>
+      <li>
+        <strong>Salesforce is no longer the system of record for products.</strong>
+        Recommended product names are not guaranteed to match
+        <code>Product2</code> records, so a quoting step would need a
+        name-matching stage.
+      </li>
+      <li>
+        <strong>The catalogue is loaded whole.</strong> Fine for a few pages;
+        a large catalogue would need retrieval rather than full context.
+      </li>
+      <li>
+        <strong>Technician sign-in is not authentication.</strong> A mapped
+        technician ID with no password is acceptable for a controlled demo and
+        nothing beyond it.
+      </li>
+      <li>
+        <strong>One turn takes 50-60 seconds</strong> on free-tier models, and
+        the free quota is 50 requests per day across the whole account.
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>
+      Installation steps are in the setup guide. Repository conventions for
+      Claude Code are in <code>CLAUDE.md</code>.
+    </p>
+  </footer>
+
+</div>
